@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"os/signal"
 	"sort"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+	"github.com/steeve/itool/debugserver"
 	"github.com/steeve/itool/installation_proxy"
 )
 
@@ -21,6 +25,7 @@ func init() {
 
 	appsRootCmd.AddCommand(appsInstallCmd)
 	appsRootCmd.AddCommand(appsUninstallCmd)
+	appsRootCmd.AddCommand(appsRunCmd)
 
 	appsArchiveCmd.AddCommand(appsArchiveCreateCmd)
 	appsArchiveCmd.AddCommand(appsRestoreArchiveCmd)
@@ -84,6 +89,44 @@ var appsListCmd = &cobra.Command{
 			fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", app.CFBundleIdentifier, app.CFBundleDisplayName, app.CFBundleVersion, app.ApplicationType)
 		}
 		writer.Flush()
+	},
+}
+
+var appsRunCmd = &cobra.Command{
+	Use:   "run BUNDLEID",
+	Short: "Run app",
+	Args:  cobra.MinimumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		bundleID := args[0]
+		client, err := installation_proxy.NewClient(getUDID())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer client.Close()
+
+		path, err := client.LookupPath(bundleID)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		proc, err := debugserver.NewProcess(getUDID(), []string{
+			path,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		go func() {
+			io.Copy(os.Stdout, proc.Stdout())
+		}()
+		if err := proc.Start(); err != nil {
+			log.Fatal(err)
+		}
+		defer proc.Kill()
+
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGPIPE, syscall.SIGTERM)
+		<-c
 	},
 }
 

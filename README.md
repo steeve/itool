@@ -62,32 +62,50 @@ $
 
 ## Examples
 
-Install/uninstall apps
+#### Run an app bundle
+Run an app bundle directly from the command line and get the standard output
+there provided the following requirements are met:
+- bundle has debug entitlements
+- device has developer image mounted
+  - Although it can list and umount, itool doesn't implement mounting developer
+    images yet. Xcode does it automatically until then, and the image stays
+    mounted until reboot.
+
+When `itool` exists (either `Ctrl-C` or killed), the app will be killed on the
+device also.
+```
+$ itool apps run my.app.bundle
+Hello world!
+^C
+$
+```
+
+#### Install/uninstall apps
 ```
 $ itool apps install myapp.ipa
 ```
 
-Simulate locations from a `.gpx` file
+#### Simulate locations from a `.gpx` file
 ```
 $ itool location play route.gpx
 ```
 
-Take a screenshot
+#### Take a screenshot
 ```
 $ itool screenshot -o shot.png
 ```
 
-Proxy a TCP connection to a local port on the device
+#### Proxy a TCP connection to a local port on the device
 ```
 $ itool proxy :5000 :3215
 ```
 
-Compose device information with `jq`
+#### Compose device information with `jq`
 ```
 $ itool info --json | jq '.ProductName + " " + .ProductVersion'
 ```
 
-Manage files
+#### Manage files
 ```
 $ itool afc ls /
 ```
@@ -95,14 +113,6 @@ $ itool afc ls /
 ## Plans / Work In Progress
 
 Some of those commands are sort of working, some are pure plans.
-
-#### `itool apps run`
-
-Run an app bundle directly from the command line and get the standard output
-there. Only apps that have debug entitlements can be run that way, and
-it requires mounting a developer image first, as it talks to `gdbserver`.
-
-This was the main reason behind creating `itool`.
 
 #### `itool pair`
 

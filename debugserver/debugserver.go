@@ -12,7 +12,8 @@ const (
 )
 
 type Client struct {
-	c *client.Client
+	c         *client.Client
+	gdbServer *GDBServer
 }
 
 func NewClient(udid string) (*Client, error) {
@@ -25,8 +26,21 @@ func NewClient(udid string) (*Client, error) {
 	c.DisableSSL()
 
 	return &Client{
-		c: c,
+		c:         c,
+		gdbServer: NewGDBServer(c.Conn()),
 	}, nil
+}
+
+func (c *Client) Recv() (string, error) {
+	return c.gdbServer.Recv()
+}
+
+func (c *Client) Send(req string) error {
+	return c.gdbServer.Send(req)
+}
+
+func (c *Client) Request(req string) (string, error) {
+	return c.gdbServer.Request(req)
 }
 
 func (c *Client) Conn() net.Conn {
