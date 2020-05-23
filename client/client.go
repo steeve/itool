@@ -28,12 +28,11 @@ func NewClient(udid string, port int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := usbmuxd.Dial(udid + ":" + strconv.Itoa(port))
-	if err != nil {
+	if err := usbmuxConn.Dial(udid + ":" + strconv.Itoa(port)); err != nil {
 		return nil, err
 	}
 	c := &Client{
-		conn:       conn,
+		conn:       usbmuxConn,
 		pairRecord: pairRecord,
 		udid:       udid,
 	}
