@@ -71,12 +71,10 @@ func startProxy(conn1, conn2 io.ReadWriteCloser) {
 		defer conn1.Close()
 		defer conn2.Close()
 		io.Copy(conn2, conn1)
-		// copyy(conn2, conn1, ">>>")
 	}()
 	go func() {
 		defer conn1.Close()
 		defer conn2.Close()
 		io.Copy(conn1, conn2)
-		// copyy(conn1, conn2, "<<<")
 	}()
 }
