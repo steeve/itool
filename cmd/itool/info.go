@@ -28,6 +28,7 @@ var infoCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer client.Close()
 		v, err := client.GetValue(key)
 		if err != nil {
 			log.Fatal(err)

@@ -31,6 +31,7 @@ var deviceListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		defer conn.Close()
 		devices, err := conn.ListDevices()
 		if err != nil {
 			return err
@@ -67,6 +68,7 @@ var deviceKeyCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		defer conn.Close()
 		pairRecord, err := conn.ReadPairRecord(getUDID())
 		if err != nil {
 			return err

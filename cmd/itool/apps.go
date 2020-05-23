@@ -51,6 +51,7 @@ var appsListCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer client.Close()
 		if appListFlags.path {
 			path, err := client.LookupPath(appListFlags.bundleID)
 			if err != nil {
