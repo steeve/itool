@@ -82,7 +82,7 @@ func (p *Process) continueLoop() error {
 			p.interupt <- struct{}{}
 			return nil
 		default:
-			return fmt.Errorf("unkown packet", pck)
+			return fmt.Errorf("unkown packet: %s", pck)
 		}
 	}
 }
