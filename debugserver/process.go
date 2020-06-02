@@ -21,6 +21,7 @@ type Process struct {
 	interupt chan struct{}
 	name     string
 	args     []string
+	env      []string
 }
 
 func makeArgs(args []string) string {
@@ -35,7 +36,7 @@ func makeArgs(args []string) string {
 	return "A" + strings.Join(ret, ",")
 }
 
-func NewProcess(udid string, args []string) (*Process, error) {
+func NewProcess(udid string, args, env []string) (*Process, error) {
 	client, err := NewClient(udid)
 	if err != nil {
 		return nil, err
@@ -48,6 +49,7 @@ func NewProcess(udid string, args []string) (*Process, error) {
 		stdoutR:  stdoutR,
 		stdoutW:  stdoutW,
 		args:     args,
+		env:      env,
 	}
 	return p, nil
 }
@@ -95,10 +97,15 @@ func (p *Process) requests(commands ...string) error {
 }
 
 func (p *Process) Start() error {
-	if err := p.start(
+	seq := []string{
 		makeArgs(p.Args()),
-		"qLaunchSuccess",
-	); err != nil {
+	}
+	for _, e := range p.env {
+		seq = append(seq, "QEnvironmentHexEncoded:"+hex.EncodeToString([]byte(e)))
+	}
+	seq = append(seq, "qLaunchSuccess")
+
+	if err := p.start(seq...); err != nil {
 		return err
 	}
 	return p.Continue()
