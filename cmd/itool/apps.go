@@ -110,9 +110,12 @@ var appsRunCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		proc, err := debugserver.NewProcess(getUDID(), []string{
-			path,
-		})
+		appArgs := []string{path}
+		appEnv := []string{}
+		if os.Getenv("IDE_DISABLED_OS_ACTIVITY_DT_MODE") == "" {
+			appEnv = append(appEnv, "OS_ACTIVITY_DT_MODE=enable")
+		}
+		proc, err := debugserver.NewProcess(getUDID(), appArgs, appEnv)
 		if err != nil {
 			log.Fatal(err)
 		}
