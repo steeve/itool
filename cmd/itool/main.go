@@ -36,6 +36,8 @@ func getUDID() string {
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer conn.Close()
+
 		devices, err := conn.ListDevices()
 		if err != nil {
 			log.Fatal(err)
@@ -43,6 +45,7 @@ func getUDID() string {
 		if len(devices) < 1 {
 			log.Fatal(fmt.Errorf("no devices are connected"))
 		}
+
 		globalFlags.udid = devices[0].UDID
 	})
 	return globalFlags.udid
