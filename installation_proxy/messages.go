@@ -92,7 +92,7 @@ type AppBundle struct {
 	ITSAppUsesNonExemptEncryption            bool                   `plist:"ITSAppUsesNonExemptEncryption"`
 	IsDemotedApp                             bool                   `plist:"IsDemotedApp"`
 	IsUpgradeable                            bool                   `plist:"IsUpgradeable"`
-	LSApplicationQueriesSchemes              []string               `plist:"LSApplicationQueriesSchemes"`
+	LSApplicationQueriesSchemes              interface{}            `plist:"LSApplicationQueriesSchemes"`
 	LSRequiresIPhoneOS                       bool                   `plist:"LSRequiresIPhoneOS"`
 	MinimumOSVersion                         string                 `plist:"MinimumOSVersion"`
 	NSUserActivityTypes                      []string               `plist:"NSUserActivityTypes"`
