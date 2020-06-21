@@ -72,9 +72,7 @@ func (c *Conn) ListDevices() ([]*DeviceAttachment, error) {
 	}
 	devices := make([]*DeviceAttachment, 0, len(resp.DeviceList))
 	for _, dev := range resp.DeviceList {
-		if dev.Properties.UDID != "" {
-			devices = append(devices, dev.Properties)
-		}
+		devices = append(devices, dev.Properties)
 	}
 	return devices, nil
 }
@@ -90,7 +88,7 @@ func (c *Conn) Dial(address string) error {
 	}
 	deviceID := -1
 	for _, device := range devices {
-		if device.UDID == udid {
+		if device.SerialNumber == udid {
 			deviceID = device.DeviceID
 		}
 	}

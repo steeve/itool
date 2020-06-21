@@ -44,7 +44,7 @@ var deviceListCmd = &cobra.Command{
 		writer := tabwriter.NewWriter(os.Stdout, 0, 32, 2, ' ', 0)
 		fmt.Fprintln(writer, "UUID\tNAME\tCONNECTION")
 		for _, device := range devices {
-			lc, err := lockdownd.NewClient(device.UDID)
+			lc, err := lockdownd.NewClient(device.SerialNumber)
 			if err != nil {
 				return err
 			}
