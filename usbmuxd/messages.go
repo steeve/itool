@@ -61,18 +61,35 @@ type ListDevicesRequest struct {
 }
 
 type ListDevicesResponse struct {
-	DeviceList []*DeviceAttached
+	DeviceList []*DeviceAttached `plist:"DeviceList"`
 }
 
 type ReadPairRecordRequest struct {
+	RequestBase
+	PairRecordID string `plist:"PairRecordID"`
+}
+
+type ReadPairRecordResponse struct {
+	PairRecordData []byte `plist:"PairRecordData"`
+}
+
+type SavePairRecordRequest struct {
 	RequestBase
 	PairRecordID   string `plist:"PairRecordID"`
 	PairRecordData []byte `plist:"PairRecordData,omitempty"`
 	DeviceID       int    `plist:"DeviceID,omitempty"`
 }
 
-type ReadPairRecordResponse struct {
-	PairRecordData []byte
+type SavePairRecordResponse struct {
+	PairRecordData []byte `plist:"PairRecordData"`
+}
+
+type DeletePairRecordRequest struct {
+	RequestBase
+	PairRecordID string `plist:"PairRecordID"`
+}
+
+type DeletePairRecordResponse struct {
 }
 
 type PairRecord struct {
@@ -85,4 +102,12 @@ type PairRecord struct {
 	RootPrivateKey    []byte
 	SystemBUID        string
 	WiFiMACAddress    string
+}
+
+type ReadBUIDRequest struct {
+	RequestBase
+}
+
+type ReadBUIDResponse struct {
+	BUID string `plist:"BUID"`
 }

@@ -62,6 +62,35 @@ func (c *Conn) ReadPairRecord(udid string) (*PairRecord, error) {
 	return record, nil
 }
 
+func (c *Conn) SavePairRecord(udid string, pairRecord *PairRecord) error {
+	recordData, err := plist.Marshal(pairRecord, plist.XMLFormat)
+	if err != nil {
+		return fmt.Errorf("unable to marshal PairRecord: %w", err)
+	}
+	req := &SavePairRecordRequest{
+		RequestBase:    RequestBase{"SavePairRecord"},
+		PairRecordID:   udid,
+		PairRecordData: recordData,
+	}
+	resp := &SavePairRecordResponse{}
+	if err := c.Request(req, resp); err != nil {
+		return fmt.Errorf("unable to save PairRecord: %w", err)
+	}
+	return nil
+}
+
+func (c *Conn) DeletePairRecord(udid string) error {
+	req := &DeletePairRecordRequest{
+		RequestBase:  RequestBase{"DeletePairRecord"},
+		PairRecordID: udid,
+	}
+	resp := &DeletePairRecordResponse{}
+	if err := c.Request(req, resp); err != nil {
+		return fmt.Errorf("unable to delete PairRecord: %w", err)
+	}
+	return nil
+}
+
 func (c *Conn) ListDevices() ([]*DeviceAttachment, error) {
 	req := &ListDevicesRequest{
 		RequestBase: RequestBase{"ListDevices"},
@@ -113,6 +142,17 @@ func (c *Conn) Dial(address string) error {
 		return syscall.ECONNREFUSED
 	}
 	return nil
+}
+
+func (c *Conn) ReadBUID() (string, error) {
+	req := &ReadBUIDRequest{
+		RequestBase: RequestBase{"ReadBUID"},
+	}
+	resp := &ReadBUIDResponse{}
+	if err := c.Request(req, resp); err != nil {
+		return "", err
+	}
+	return resp.BUID, nil
 }
 
 func (c *Conn) Send(msg interface{}) error {

@@ -45,6 +45,8 @@ type DeviceValues struct {
 	DeviceClass             string
 	DeviceColor             string
 	DeviceName              string
+	DevicePublicKey         []byte
+	DeviceCertificate       []byte
 	DieID                   int
 	HardwareModel           string
 	HasSiDP                 bool
