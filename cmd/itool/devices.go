@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"log"
 	"os"
+	"sort"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
+
+	"github.com/steeve/itool/diagnostics_relay"
 	"github.com/steeve/itool/lockdownd"
 	"github.com/steeve/itool/usbmuxd"
 )
@@ -15,6 +19,11 @@ import (
 func init() {
 	devicesCmd.AddCommand(devicesListCmd)
 	devicesCmd.AddCommand(devicesKeyCmd)
+	devicesCmd.AddCommand(devicesQueryCmd)
+	devicesCmd.AddCommand(devicesShutdownCmd)
+	devicesCmd.AddCommand(devicesRestartCmd)
+	devicesCmd.AddCommand(devicesSleepCmd)
+	devicesCmd.AddCommand(devicesInfoCmd)
 	rootCmd.AddCommand(devicesCmd)
 }
 
@@ -88,5 +97,98 @@ var devicesKeyCmd = &cobra.Command{
 			},
 		)
 		return nil
+	},
+}
+
+var devicesRestartCmd = &cobra.Command{
+	Use:   "restart",
+	Short: "Restart device",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		client, err := diagnostics_relay.NewClient(getUDID())
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		return client.Restart()
+	},
+}
+
+var devicesSleepCmd = &cobra.Command{
+	Use:   "sleep",
+	Short: "Disconnect USB and put device to sleep",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		client, err := diagnostics_relay.NewClient(getUDID())
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		return client.Sleep()
+	},
+}
+
+var devicesShutdownCmd = &cobra.Command{
+	Use:   "shutdown",
+	Short: "Shutdown device",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		client, err := diagnostics_relay.NewClient(getUDID())
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		return client.Shutdown()
+	},
+}
+
+var devicesQueryCmd = &cobra.Command{
+	Use:   "query [!]KEY ...",
+	Short: "Query MobileGestalt clear and encrypted keys",
+	Args:  cobra.MinimumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		client, err := diagnostics_relay.NewClient(getUDID())
+		if err != nil {
+			return err
+		}
+		defer client.Close()
+		return client.MobileGestalt(args...)
+	},
+}
+
+var devicesInfoCmd = &cobra.Command{
+	Use:   "info [KEY]",
+	Short: "Queries device information keys",
+	Args:  cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		key := ""
+		if len(args) > 0 {
+			key = args[0]
+		}
+		client, err := lockdownd.NewClient(getUDID())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer client.Close()
+		v, err := client.GetValue(key)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if globalFlags.json {
+			json.NewEncoder(os.Stdout).Encode(v)
+			return
+		}
+		switch v := v.(type) {
+		case map[string]interface{}:
+			keys := make([]string, 0)
+			for k := range v {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				fmt.Print(k, ": ", v[k])
+				fmt.Println("")
+			}
+		}
+		if key != "" {
+			fmt.Println(v)
+		}
 	},
 }
