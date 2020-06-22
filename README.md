@@ -38,7 +38,7 @@ Available Commands:
   afc          Manage Apple File Conduit (AFC)
   apps         Manage apps
   debugserver  Debugserver proxy
-  device       Manage devices
+  devices      Manage devices
   diagnostics  Manage diagnostics
   fetchsymbols Manage fetchsymbols
   help         Help about any command
@@ -114,7 +114,7 @@ $ itool afc ls /
 
 Some of those commands are sort of working, some are pure plans.
 
-#### `itool pair`
+#### `itool devices pair`
 
 Nescessary to make Linux work properly.
 

@@ -13,17 +13,17 @@ import (
 )
 
 func init() {
-	deviceCmd.AddCommand(deviceListCmd)
-	deviceCmd.AddCommand(deviceKeyCmd)
-	rootCmd.AddCommand(deviceCmd)
+	devicesCmd.AddCommand(devicesListCmd)
+	devicesCmd.AddCommand(devicesKeyCmd)
+	rootCmd.AddCommand(devicesCmd)
 }
 
-var deviceCmd = &cobra.Command{
-	Use:   "device",
+var devicesCmd = &cobra.Command{
+	Use:   "devices",
 	Short: "Manage devices",
 }
 
-var deviceListCmd = &cobra.Command{
+var devicesListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List connected devices",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -60,7 +60,7 @@ var deviceListCmd = &cobra.Command{
 	},
 }
 
-var deviceKeyCmd = &cobra.Command{
+var devicesKeyCmd = &cobra.Command{
 	Use:   "key",
 	Short: "Dump TLS key for a device pairing",
 	RunE: func(cmd *cobra.Command, args []string) error {
