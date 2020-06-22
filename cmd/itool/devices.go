@@ -24,6 +24,7 @@ func init() {
 	devicesCmd.AddCommand(devicesRestartCmd)
 	devicesCmd.AddCommand(devicesSleepCmd)
 	devicesCmd.AddCommand(devicesInfoCmd)
+	devicesCmd.AddCommand(devicesRecoveryCmd)
 	rootCmd.AddCommand(devicesCmd)
 }
 
@@ -190,5 +191,21 @@ var devicesInfoCmd = &cobra.Command{
 		if key != "" {
 			fmt.Println(v)
 		}
+	},
+}
+
+var devicesRecoveryCmd = &cobra.Command{
+	Use:   "recovery",
+	Short: "Enter recovery",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		client, err := lockdownd.NewClient(getUDID())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer client.Close()
+		if err := client.EnterRecovery(); err != nil {
+			return fmt.Errorf("unable to enter recovery: %w", err)
+		}
+		return nil
 	},
 }

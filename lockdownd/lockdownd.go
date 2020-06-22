@@ -103,6 +103,17 @@ func (c *Client) StartService(service string, withEscrowBag bool) (*StartService
 	return resp, nil
 }
 
+func (c *Client) EnterRecovery() error {
+	req := &EnterRecoveryRequest{
+		RequestBase: RequestBase{"EnterRecovery"},
+	}
+	resp := &EnterRecoveryResponse{}
+	if err := c.c.Request(req, resp); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Client) Close() error {
 	return c.c.Close()
 }

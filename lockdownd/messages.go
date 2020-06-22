@@ -84,3 +84,11 @@ type StartServiceResponse struct {
 	Port             int
 	EnableServiceSSL bool
 }
+
+type EnterRecoveryRequest struct {
+	RequestBase
+}
+
+type EnterRecoveryResponse struct {
+	ResponseBase
+}
