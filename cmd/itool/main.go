@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
@@ -35,7 +34,7 @@ func getUDID() string {
 		if globalFlags.udid != "" {
 			return
 		}
-		conn, err := usbmuxd.Dial(context.Background(), globalFlags.usbmuxdUrl)
+		conn, err := usbmuxd.Dial(cmd.Context(), globalFlags.usbmuxdUrl)
 		if err != nil {
 			log.Fatal(err)
 		}

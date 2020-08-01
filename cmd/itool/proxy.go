@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log"
@@ -35,7 +34,7 @@ var proxyCmd = &cobra.Command{
 				log.Println(err)
 				continue
 			}
-			remoteConn, err := usbmuxd.DialUDID(context.Background(), globalFlags.usbmuxdUrl, getUDID()+":"+remotePort)
+			remoteConn, err := usbmuxd.DialUDID(cmd.Context(), globalFlags.usbmuxdUrl, getUDID()+":"+remotePort)
 			if err != nil {
 				localConn.Close()
 				log.Println(err)
