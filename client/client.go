@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"crypto/tls"
 	"encoding/binary"
 	"io"
@@ -20,7 +21,7 @@ type Client struct {
 }
 
 func NewClient(udid string, port int) (*Client, error) {
-	usbmuxConn, err := usbmuxd.NewConn()
+	usbmuxConn, err := usbmuxd.Dial(context.TODO(), usbmuxd.UsbmuxdURL)
 	if err != nil {
 		return nil, err
 	}

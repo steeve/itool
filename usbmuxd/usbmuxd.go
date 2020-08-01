@@ -1,6 +1,7 @@
 package usbmuxd
 
 import (
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -8,8 +9,8 @@ import (
 	"net"
 	"strconv"
 	"syscall"
-	"time"
 
+	"github.com/steeve/itool/netutils"
 	"howett.net/plist"
 )
 
@@ -18,35 +19,39 @@ var (
 )
 
 type Conn struct {
-	conn net.Conn
+	net.Conn
 }
 
 func htonl(v uint16) uint16 {
 	return (v << 8 & 0xFF00) | (v >> 8 & 0xFF)
 }
 
-func NewConn() (*Conn, error) {
-	conn, err := usbmuxdDial()
+func Dial(ctx context.Context, usbmuxdURL string) (*Conn, error) {
+	c, err := netutils.DialURLContext(ctx, usbmuxdURL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to dial usbmuxd: %w", err)
 	}
 	return &Conn{
-		conn: conn,
+		Conn: c,
 	}, nil
 }
 
-func Dial(address string) (net.Conn, error) {
-	conn, err := NewConn()
+func DialDefault(ctx context.Context) (*Conn, error) {
+	return Dial(ctx, UsbmuxdURL)
+}
+
+func DialUDID(ctx context.Context, usbmuxdURL, udidAddr string) (net.Conn, error) {
+	conn, err := Dial(ctx, usbmuxdURL)
 	if err != nil {
 		return nil, err
 	}
-	if err := conn.Dial(address); err != nil {
+	if err := conn.Dial(udidAddr); err != nil {
 		return nil, err
 	}
 	return conn, nil
 }
 
-func (c *Conn) ReadPairRecord(udid string) (*PairRecord, error) {
+func (c Conn) ReadPairRecord(udid string) (*PairRecord, error) {
 	req := &ReadPairRecordRequest{
 		RequestBase:  RequestBase{"ReadPairRecord"},
 		PairRecordID: udid,
@@ -62,7 +67,7 @@ func (c *Conn) ReadPairRecord(udid string) (*PairRecord, error) {
 	return record, nil
 }
 
-func (c *Conn) SavePairRecord(udid string, pairRecord *PairRecord) error {
+func (c Conn) SavePairRecord(udid string, pairRecord *PairRecord) error {
 	recordData, err := plist.Marshal(pairRecord, plist.XMLFormat)
 	if err != nil {
 		return fmt.Errorf("unable to marshal PairRecord: %w", err)
@@ -79,7 +84,7 @@ func (c *Conn) SavePairRecord(udid string, pairRecord *PairRecord) error {
 	return nil
 }
 
-func (c *Conn) DeletePairRecord(udid string) error {
+func (c Conn) DeletePairRecord(udid string) error {
 	req := &DeletePairRecordRequest{
 		RequestBase:  RequestBase{"DeletePairRecord"},
 		PairRecordID: udid,
@@ -91,7 +96,7 @@ func (c *Conn) DeletePairRecord(udid string) error {
 	return nil
 }
 
-func (c *Conn) ListDevices() ([]*DeviceAttachment, error) {
+func (c Conn) ListDevices() ([]*DeviceAttachment, error) {
 	req := &ListDevicesRequest{
 		RequestBase: RequestBase{"ListDevices"},
 	}
@@ -106,7 +111,7 @@ func (c *Conn) ListDevices() ([]*DeviceAttachment, error) {
 	return devices, nil
 }
 
-func (c *Conn) Dial(address string) error {
+func (c Conn) Dial(address string) error {
 	udid, port, err := net.SplitHostPort(address)
 	if err != nil {
 		return err
@@ -144,7 +149,7 @@ func (c *Conn) Dial(address string) error {
 	return nil
 }
 
-func (c *Conn) ReadBUID() (string, error) {
+func (c Conn) ReadBUID() (string, error) {
 	req := &ReadBUIDRequest{
 		RequestBase: RequestBase{"ReadBUID"},
 	}
@@ -155,7 +160,7 @@ func (c *Conn) ReadBUID() (string, error) {
 	return resp.BUID, nil
 }
 
-func (c *Conn) Send(msg interface{}) error {
+func (c Conn) Send(msg interface{}) error {
 	data, err := plist.Marshal(msg, plist.XMLFormat)
 	if err != nil {
 		return err
@@ -170,7 +175,7 @@ func (c *Conn) Send(msg interface{}) error {
 	return nil
 }
 
-func (c *Conn) Recv(msg interface{}) error {
+func (c Conn) Recv(msg interface{}) error {
 	hdr := Header{}
 	if err := binary.Read(c, binary.LittleEndian, &hdr); err != nil {
 		return err
@@ -185,81 +190,9 @@ func (c *Conn) Recv(msg interface{}) error {
 	return nil
 }
 
-func (c *Conn) Request(req, resp interface{}) error {
+func (c Conn) Request(req, resp interface{}) error {
 	if err := c.Send(req); err != nil {
 		return err
 	}
 	return c.Recv(resp)
-}
-
-// Read reads data from the connection.
-// Read can be made to time out and return an Error with Timeout() == true
-// after a fixed time limit; see SetDeadline and SetReadDeadline.
-func (c *Conn) Read(b []byte) (int, error) {
-	return c.conn.Read(b)
-}
-
-// Write writes data to the connection.
-// Write can be made to time out and return an Error with Timeout() == true
-// after a fixed time limit; see SetDeadline and SetWriteDeadline.
-func (c *Conn) Write(b []byte) (int, error) {
-	return c.conn.Write(b)
-}
-
-// Close closes the connection.
-// Any blocked Read or Write operations will be unblocked and return errors.
-func (c *Conn) Close() error {
-	return c.conn.Close()
-}
-
-// LocalAddr returns the local network address.
-func (c *Conn) LocalAddr() net.Addr {
-	return c.conn.LocalAddr()
-}
-
-// RemoteAddr returns the remote network address.
-func (c *Conn) RemoteAddr() net.Addr {
-	return c.conn.RemoteAddr()
-}
-
-// SetDeadline sets the read and write deadlines associated
-// with the connection. It is equivalent to calling both
-// SetReadDeadline and SetWriteDeadline.
-//
-// A deadline is an absolute time after which I/O operations
-// fail with a timeout (see type Error) instead of
-// blocking. The deadline applies to all future and pending
-// I/O, not just the immediately following call to Read or
-// Write. After a deadline has been exceeded, the connection
-// can be refreshed by setting a deadline in the future.
-//
-// An idle timeout can be implemented by repeatedly extending
-// the deadline after successful Read or Write calls.
-//
-// A zero value for t means I/O operations will not time out.
-//
-// Note that if a TCP connection has keep-alive turned on,
-// which is the default unless overridden by Dialer.KeepAlive
-// or ListenConfig.KeepAlive, then a keep-alive failure may
-// also return a timeout error. On Unix systems a keep-alive
-// failure on I/O can be detected using
-// errors.Is(err, syscall.ETIMEDOUT).
-func (c *Conn) SetDeadline(t time.Time) error {
-	return c.conn.SetDeadline(t)
-}
-
-// SetReadDeadline sets the deadline for future Read calls
-// and any currently-blocked Read call.
-// A zero value for t means Read will not time out.
-func (c *Conn) SetReadDeadline(t time.Time) error {
-	return c.conn.SetReadDeadline(t)
-}
-
-// SetWriteDeadline sets the deadline for future Write calls
-// and any currently-blocked Write call.
-// Even if write times out, it may return n > 0, indicating that
-// some of the data was successfully written.
-// A zero value for t means Write will not time out.
-func (c *Conn) SetWriteDeadline(t time.Time) error {
-	return c.conn.SetWriteDeadline(t)
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -11,8 +12,9 @@ import (
 )
 
 var globalFlags = struct {
-	udid string
-	json bool
+	udid       string
+	json       bool
+	usbmuxdUrl string
 }{}
 
 var udidOnce sync.Once
@@ -23,6 +25,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.PersistentFlags().StringVarP(&globalFlags.udid, "usbmuxd", "m", usbmuxd.UsbmuxdURL, "usbmuxd URL")
 	rootCmd.PersistentFlags().StringVarP(&globalFlags.udid, "udid", "u", "", "UDID")
 	rootCmd.PersistentFlags().BoolVarP(&globalFlags.json, "json", "", false, "JSON output (not all commands)")
 }
@@ -32,7 +35,7 @@ func getUDID() string {
 		if globalFlags.udid != "" {
 			return
 		}
-		conn, err := usbmuxd.NewConn()
+		conn, err := usbmuxd.Dial(context.Background(), globalFlags.usbmuxdUrl)
 		if err != nil {
 			log.Fatal(err)
 		}
