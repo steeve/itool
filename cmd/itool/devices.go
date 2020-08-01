@@ -37,7 +37,7 @@ var devicesListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List connected devices",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		conn, err := usbmuxd.Dial(cmd.Context(), globalFlags.usbmuxdUrl)
+		conn, err := usbmuxd.Open(cmd.Context())
 		if err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ var devicesKeyCmd = &cobra.Command{
 	Use:   "key",
 	Short: "Dump TLS key for a device pairing",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		conn, err := usbmuxd.Dial(cmd.Context(), globalFlags.usbmuxdUrl)
+		conn, err := usbmuxd.Open(cmd.Context())
 		if err != nil {
 			return err
 		}

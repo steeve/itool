@@ -34,13 +34,13 @@ var proxyCmd = &cobra.Command{
 				log.Println(err)
 				continue
 			}
-			remoteConn, err := usbmuxd.DialUDID(cmd.Context(), globalFlags.usbmuxdUrl, getUDID()+":"+remotePort)
+			remoteConn, err := usbmuxd.Dial(cmd.Context(), globalFlags.udid+":"+remotePort)
 			if err != nil {
 				localConn.Close()
 				log.Println(err)
 				continue
 			}
-			log.Printf("new connection from %s to %s:%s", localConn.RemoteAddr(), getUDID(), remotePort)
+			log.Printf("new connection from %s", localConn.RemoteAddr())
 			startProxy(localConn, remoteConn)
 		}
 	},

@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"io"
 	"net"
-	"strconv"
 
 	"github.com/steeve/itool/usbmuxd"
 
@@ -21,7 +20,7 @@ type Client struct {
 }
 
 func NewClient(udid string, port int) (*Client, error) {
-	usbmuxConn, err := usbmuxd.Dial(context.TODO(), usbmuxd.UsbmuxdURL)
+	usbmuxConn, err := usbmuxd.Open(context.TODO())
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +28,7 @@ func NewClient(udid string, port int) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := usbmuxConn.Dial(udid + ":" + strconv.Itoa(port)); err != nil {
+	if err := usbmuxConn.Connect(udid, uint16(port)); err != nil {
 		return nil, err
 	}
 	c := &Client{
@@ -40,8 +39,51 @@ func NewClient(udid string, port int) (*Client, error) {
 	return c, nil
 }
 
+func Dial(ctx context.Context, conn *usbmuxd.Conn, udid string, port int) (*Client, error) {
+	usbmuxConn, err := usbmuxd.Open(ctx)
+	if err != nil {
+		return nil, err
+	}
+	pairRecord, err := usbmuxConn.ReadPairRecord(udid)
+	if err != nil {
+		return nil, err
+	}
+	if err := usbmuxConn.Connect(udid, uint16(port)); err != nil {
+		return nil, err
+	}
+	c := &Client{
+		conn:       usbmuxConn,
+		pairRecord: pairRecord,
+		udid:       udid,
+	}
+	return c, nil
+}
+
+func NewClient2(ctx context.Context, conn net.Conn) (*Client, error) {
+	c := &Client{
+		conn: conn,
+	}
+	return c, nil
+}
+
 func (c *Client) EnableSSL() error {
 	crt, err := tls.X509KeyPair(c.pairRecord.HostCertificate, c.pairRecord.HostPrivateKey)
+	if err != nil {
+		return err
+	}
+	config := &tls.Config{
+		Certificates:       []tls.Certificate{crt},
+		InsecureSkipVerify: true,
+	}
+	c.tlsConn = tls.Client(c.conn, config)
+	if err := c.tlsConn.Handshake(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) EnableSSL2(pairRecord *usbmuxd.PairRecord) error {
+	crt, err := tls.X509KeyPair(pairRecord.HostCertificate, pairRecord.HostPrivateKey)
 	if err != nil {
 		return err
 	}

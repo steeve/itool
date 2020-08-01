@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"strconv"
+	"sync"
 	"syscall"
 
 	"github.com/steeve/itool/netutils"
@@ -18,16 +20,23 @@ var (
 	ErrNotFound = errors.New("device not found")
 )
 
+func init() {
+	netutils.RegisterURLScheme("usbmux", func(ctx context.Context, u *url.URL) (net.Conn, error) {
+		return Dial(ctx, u.Host)
+	})
+}
+
 type Conn struct {
 	net.Conn
+	sync.RWMutex
 }
 
 func htonl(v uint16) uint16 {
 	return (v << 8 & 0xFF00) | (v >> 8 & 0xFF)
 }
 
-func Dial(ctx context.Context, usbmuxdURL string) (*Conn, error) {
-	c, err := netutils.DialURLContext(ctx, usbmuxdURL)
+func OpenWithUrl(ctx context.Context, usbmuxdURL string) (*Conn, error) {
+	c, err := netutils.URLDialContext(ctx, usbmuxdURL)
 	if err != nil {
 		return nil, fmt.Errorf("unable to dial usbmuxd: %w", err)
 	}
@@ -36,19 +45,32 @@ func Dial(ctx context.Context, usbmuxdURL string) (*Conn, error) {
 	}, nil
 }
 
-func DialDefault(ctx context.Context) (*Conn, error) {
-	return Dial(ctx, UsbmuxdURL)
+func Open(ctx context.Context) (*Conn, error) {
+	return OpenWithUrl(ctx, UsbmuxdURL)
 }
 
-func DialUDID(ctx context.Context, usbmuxdURL, udidAddr string) (net.Conn, error) {
-	conn, err := Dial(ctx, usbmuxdURL)
+func Connect(ctx context.Context, udid string, port uint16) (net.Conn, error) {
+	conn, err := Open(ctx)
 	if err != nil {
 		return nil, err
 	}
-	if err := conn.Dial(udidAddr); err != nil {
+	if err := conn.Connect(udid, port); err != nil {
+		conn.Close()
 		return nil, err
 	}
 	return conn, nil
+}
+
+func Dial(ctx context.Context, udidAddr string) (net.Conn, error) {
+	udid, portStr, err := net.SplitHostPort(udidAddr)
+	if err != nil {
+		return nil, err
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return nil, err
+	}
+	return Connect(ctx, udid, uint16(port))
 }
 
 func (c Conn) ReadPairRecord(udid string) (*PairRecord, error) {
@@ -111,34 +133,32 @@ func (c Conn) ListDevices() ([]*DeviceAttachment, error) {
 	return devices, nil
 }
 
-func (c Conn) Dial(address string) error {
-	udid, port, err := net.SplitHostPort(address)
-	if err != nil {
-		return err
-	}
+func (c Conn) DeviceIDFromUDID(udid string) (int, error) {
 	devices, err := c.ListDevices()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	deviceID := -1
 	for _, device := range devices {
+		if udid == "" {
+			return device.DeviceID, nil
+		}
 		if device.SerialNumber == udid {
-			deviceID = device.DeviceID
+			return device.DeviceID, nil
 		}
 	}
-	if deviceID < 0 {
-		return fmt.Errorf("unable to find device with udid: %v", udid)
-	}
-	portNumber, err := strconv.Atoi(port)
+	return 0, fmt.Errorf("unable to find device with udid: %v", udid)
+}
+
+func (c Conn) Connect(udid string, port uint16) error {
+	deviceId, err := c.DeviceIDFromUDID(udid)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to connect: %w", err)
 	}
 	req := &ConnectRequest{
 		RequestBase: RequestBase{"Connect"},
-		DeviceID:    deviceID,
-		PortNumber:  htonl(uint16(portNumber)),
+		DeviceID:    deviceId,
+		PortNumber:  htonl(port),
 	}
-	// fmt.Println(req, portNumber)
 	resp := &ResultResponse{}
 	if err := c.Request(req, resp); err != nil {
 		return err
@@ -161,6 +181,12 @@ func (c Conn) ReadBUID() (string, error) {
 }
 
 func (c Conn) Send(msg interface{}) error {
+	c.Lock()
+	defer c.Unlock()
+	return c.send(msg)
+}
+
+func (c Conn) send(msg interface{}) error {
 	data, err := plist.Marshal(msg, plist.XMLFormat)
 	if err != nil {
 		return err
@@ -176,6 +202,12 @@ func (c Conn) Send(msg interface{}) error {
 }
 
 func (c Conn) Recv(msg interface{}) error {
+	c.Lock()
+	defer c.Unlock()
+	return c.recv(msg)
+}
+
+func (c Conn) recv(msg interface{}) error {
 	hdr := Header{}
 	if err := binary.Read(c, binary.LittleEndian, &hdr); err != nil {
 		return err
@@ -191,8 +223,10 @@ func (c Conn) Recv(msg interface{}) error {
 }
 
 func (c Conn) Request(req, resp interface{}) error {
-	if err := c.Send(req); err != nil {
+	c.Lock()
+	defer c.Unlock()
+	if err := c.send(req); err != nil {
 		return err
 	}
-	return c.Recv(resp)
+	return c.recv(resp)
 }

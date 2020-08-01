@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -11,12 +12,15 @@ import (
 )
 
 var globalFlags = struct {
-	udid       string
-	json       bool
-	usbmuxdUrl string
+	udid string
+	json bool
 }{}
 
 var udidOnce sync.Once
+
+var (
+	defaultPairRecord *usbmuxd.PairRecord
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "itool",
@@ -24,7 +28,7 @@ var rootCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&globalFlags.udid, "usbmuxd", "m", usbmuxd.UsbmuxdURL, "usbmuxd URL")
+	rootCmd.PersistentFlags().StringVarP(&usbmuxd.UsbmuxdURL, "usbmuxd", "m", usbmuxd.UsbmuxdURL, "usbmuxd URL")
 	rootCmd.PersistentFlags().StringVarP(&globalFlags.udid, "udid", "u", "", "UDID")
 	rootCmd.PersistentFlags().BoolVarP(&globalFlags.json, "json", "", false, "JSON output (not all commands)")
 }
@@ -34,7 +38,7 @@ func getUDID() string {
 		if globalFlags.udid != "" {
 			return
 		}
-		conn, err := usbmuxd.Dial(cmd.Context(), globalFlags.usbmuxdUrl)
+		conn, err := usbmuxd.Open(context.TODO())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -44,11 +48,12 @@ func getUDID() string {
 		if err != nil {
 			log.Fatal(err)
 		}
-		if len(devices) < 1 {
-			log.Fatal(fmt.Errorf("no devices are connected"))
+		for _, device := range devices {
+			globalFlags.udid = device.UDID
+			return
 		}
 
-		globalFlags.udid = devices[0].UDID
+		log.Fatal(fmt.Errorf("no devices are connected"))
 	})
 	return globalFlags.udid
 }

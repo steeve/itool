@@ -4,7 +4,7 @@ package usbmuxd
 
 import "net"
 
-const (
+var (
 	UsbmuxdURL = "unix:///var/run/usbmuxd"
 )
 
