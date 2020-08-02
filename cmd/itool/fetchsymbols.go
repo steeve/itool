@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -25,21 +24,22 @@ var fetchsymbolsCmd = &cobra.Command{
 var fetchsymbolsListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List symbols files",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		fc := fetchsymbols.NewClient(getUDID())
 		files, err := fc.List()
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("unable to list fetchsymbols: %w", err)
 		}
 		if globalFlags.json {
 			json.NewEncoder(os.Stdout).Encode(&struct {
 				Files []string
 			}{files})
-			return
+			return nil
 		}
 		for _, f := range files {
 			fmt.Println(f)
 		}
+		return nil
 	},
 }
 
@@ -47,13 +47,13 @@ var fetchsymbolsCopyCmd = &cobra.Command{
 	Use:   "copy SRC DST",
 	Short: "Copy symbols file to host",
 	Args:  cobra.ExactArgs(2),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		src := args[0]
 		dst := args[1]
 		fc := fetchsymbols.NewClient(getUDID())
 		files, err := fc.List()
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("unable to list fetchsymbols: %w", err)
 		}
 		idx := -1
 		for i, f := range files {
@@ -62,17 +62,18 @@ var fetchsymbolsCopyCmd = &cobra.Command{
 			}
 		}
 		if idx < 0 {
-			log.Fatalf("unable to find source file %v", src)
+			return fmt.Errorf("unable to find source file %v", src)
 		}
 		srcReader, err := fc.GetFile(uint32(idx))
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("unable to get file %d: %w", idx, err)
 		}
 		dstFile, err := os.Create(dst)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Errorf("unable to create file %v: %w", dst, err)
 		}
 		defer dstFile.Close()
 		io.Copy(dstFile, srcReader)
+		return nil
 	},
 }
