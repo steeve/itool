@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strings"
 	"syscall"
 	"text/tabwriter"
 
@@ -87,7 +88,14 @@ var appsListCmd = &cobra.Command{
 		sort.Strings(appids)
 		for _, appid := range appids {
 			app := apps[appid]
-			fmt.Fprintf(writer, "%s\t%s\t%s\t%s\n", app.CFBundleIdentifier, app.CFBundleDisplayName, app.CFBundleVersion, app.ApplicationType)
+			fmt.Fprintf(
+				writer,
+				"%s\t%s\t%s\t%s\n",
+				strings.TrimSpace(app.CFBundleIdentifier),
+				strings.TrimSpace(app.CFBundleDisplayName),
+				strings.TrimSpace(app.CFBundleShortVersionString),
+				strings.TrimSpace(app.ApplicationType),
+			)
 		}
 		writer.Flush()
 	},
